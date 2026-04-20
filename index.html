@@ -838,6 +838,8 @@ async function refreshNow() {
     eventData = await res.json();
     lastFetchedAt = new Date();
     render(/* keepTab */ true);
+    const isLive = eventData?.displayStatus === 'inProgress' || eventData?.eventStatus === 'IN_PROGRESS';
+    if (!isLive && refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
   } catch (e) {
     showError(e.message);
   } finally {
@@ -847,7 +849,10 @@ async function refreshNow() {
 
 function startAutoRefresh(id) {
   if (refreshTimer) clearInterval(refreshTimer);
-  refreshTimer = setInterval(() => refreshNow(), 30_000);
+  const isLive = eventData?.displayStatus === 'inProgress' || eventData?.eventStatus === 'IN_PROGRESS';
+  if (isLive) {
+    refreshTimer = setInterval(() => refreshNow(), 30_000);
+  }
   updateRefreshLabel();
   setInterval(updateRefreshLabel, 5_000);
 }
