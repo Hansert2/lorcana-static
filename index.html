@@ -593,9 +593,33 @@
       /* Roster: single column */
       .roster-grid { grid-template-columns: 1fr; }
 
-      /* Modal: full screen */
+      /* Modal: bottom sheet */
       .modal-backdrop { padding: 0; align-items: flex-end; }
-      .spotlight-modal { max-width: 100%; max-height: 92vh; border-bottom: none; }
+      .spotlight-modal {
+        max-width: 100%;
+        max-height: 92vh;
+        border-bottom: none;
+        border-radius: 12px 12px 0 0;
+      }
+      .spotlight-modal::before {
+        content: '';
+        display: block;
+        width: 36px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--border);
+        margin: 0.6rem auto 0;
+        flex-shrink: 0;
+      }
+      .spotlight-header { padding: 0.75rem 1rem; }
+      .spotlight-close {
+        padding: 0.5rem;
+        font-size: 1.1rem;
+        margin: -0.5rem -0.5rem -0.5rem 0;
+      }
+      /* Tables inside modal scroll horizontally */
+      .spotlight-section { overflow-x: auto; }
+      .spotlight-modal .data-table { min-width: 420px; }
     }
 
     /* ── Player spotlight modal ───────────────────────────────────────── */
