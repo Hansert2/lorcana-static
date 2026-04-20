@@ -601,17 +601,9 @@
         border-bottom: none;
         border-radius: 12px 12px 0 0;
       }
-      .spotlight-modal::before {
-        content: '';
-        display: block;
-        width: 36px;
-        height: 4px;
-        border-radius: 2px;
-        background: var(--border);
-        margin: 0.6rem auto 0;
-        flex-shrink: 0;
-      }
-      .spotlight-header { padding: 0.75rem 1rem; }
+      .sheet-handle { display: flex; justify-content: center; padding: 0.6rem 0 0; cursor: grab; touch-action: none; }
+      .sheet-handle::after { content: ''; display: block; width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2); }
+      .spotlight-header { padding: 0.5rem 1rem 0.75rem; }
       .spotlight-close {
         padding: 0.5rem;
         font-size: 1.1rem;
@@ -1371,6 +1363,8 @@ function getPreviousMeetings(id1, id2) {
 }
 
 // ─── Player spotlight modal ───────────────────────────────────────────────────
+let sheetDragCleanup = null;
+
 function openPlayerSpotlight(userId) {
   const player = playerIndex.get(userId);
   if (!player) return;
@@ -1441,7 +1435,9 @@ function openPlayerSpotlight(userId) {
 
   const modal = document.createElement('div');
   modal.className = 'spotlight-modal';
+  modal.style.willChange = 'transform';
   modal.innerHTML = `
+    <div class="sheet-handle"></div>
     <div class="spotlight-header">
       <div class="spotlight-title">
         <div class="spotlight-tag">${countryFlag(player.countryCode) ? `<span style="margin-right:0.4em">${countryFlag(player.countryCode)}</span>` : ''}${esc(player.tag)}</div>
@@ -1487,6 +1483,50 @@ function openPlayerSpotlight(userId) {
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
   document.addEventListener('keydown', escListener);
+
+  // Swipe-to-dismiss (mobile bottom sheet)
+  if (window.matchMedia('(max-width: 600px)').matches) {
+    const handle = modal.querySelector('.sheet-handle');
+    let startY = null;
+
+    function onMove(e) {
+      if (startY === null) return;
+      const dy = Math.max(0, e.touches[0].clientY - startY);
+      modal.style.transform = `translateY(${dy}px)`;
+      backdrop.style.opacity = String(Math.max(0.15, 1 - dy / 300));
+    }
+
+    function onEnd(e) {
+      if (startY === null) return;
+      const dy = e.changedTouches[0].clientY - startY;
+      startY = null;
+      cleanup();
+      if (dy > 80) {
+        modal.style.transition = 'transform 0.22s ease';
+        modal.style.transform = 'translateY(110%)';
+        setTimeout(closePlayerSpotlight, 220);
+      } else {
+        modal.style.transition = 'transform 0.22s ease';
+        modal.style.transform = '';
+        backdrop.style.opacity = '';
+        modal.addEventListener('transitionend', () => { modal.style.transition = ''; }, { once: true });
+      }
+    }
+
+    function cleanup() {
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+    }
+
+    handle.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      modal.style.transition = 'none';
+      document.addEventListener('touchmove', onMove, { passive: true });
+      document.addEventListener('touchend', onEnd);
+    }, { passive: true });
+
+    sheetDragCleanup = cleanup;
+  }
 }
 
 function escListener(e) {
@@ -1497,6 +1537,7 @@ function closePlayerSpotlight() {
   const el = document.getElementById('player-spotlight');
   if (el) el.remove();
   document.removeEventListener('keydown', escListener);
+  if (sheetDragCleanup) { sheetDragCleanup(); sheetDragCleanup = null; }
 }
 
 // ─── Enter key on input ───────────────────────────────────────────────────────
