@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lorcana Tournament Stats</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c9a96e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='24' height='24' rx='4' fill='%23232847'/%3E%3Cpath d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Design tokens matching the Play Hub ─────────────────────────── */
+    :root {
+      --bg-page:        hsl(236 34% 17%);
+      --bg-card:        hsl(236 34% 26%);
+      --bg-card-alt:    hsl(236 34% 22%);
+      --bg-elevated:    hsl(236 34% 32%);
+      --bg-hover:       hsl(236 34% 34%);
+      --gold:           hsl(41 47% 67%);
+      --gold-light:     hsl(35 51% 77%);
+      --gold-dim:       hsl(41 47% 67% / 0.15);
+      --text:           #fff;
+      --text-muted:     rgba(255,255,255,0.5);
+      --text-faint:     rgba(255,255,255,0.25);
+      --border:         rgba(255,255,255,0.08);
+      --border-gold:    hsl(41 47% 67% / 0.4);
+      --green:          hsl(126 53% 45%);
+      --red:            hsl(348 93% 53%);
+      --teal:           hsl(198 99% 39%);
+      --radius:         0px;  /* Play Hub uses sharp corners */
+      --shadow:         0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 14px; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-page);
+      background-image:
+        url('https://storage.googleapis.com/spicerack_media/game_images/1_disney-lorcana/background/lorcana-event-bg.png');
+      background-size: 400px;
+      background-attachment: fixed;
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── Page chrome ──────────────────────────────────────────────────── */
+    .page-header {
+      background: var(--bg-card-alt);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      height: 52px;
+    }
+    .page-header-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .page-header-logo svg { width: 22px; height: 22px; }
+
+    .page-wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+    }
+
+    /* ── Event lookup bar ─────────────────────────────────────────────── */
+    .lookup-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .lookup-bar input {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      font-family: inherit;
+      font-size: 0.875rem;
+      outline: none;
+      border-radius: var(--radius);
+      transition: border-color 0.15s;
+    }
+    .lookup-bar input::placeholder { color: var(--text-muted); }
+    .lookup-bar input:focus { border-color: var(--gold); }
+    .btn {
+      background: var(--gold);
+      color: hsl(236 34% 17%);
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 0.5rem 1.25rem;
+      border: none;
+      cursor: pointer;
+      border-radius: var(--radius);
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: var(--gold-light); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      font-family: inherit;
+      font-size: 0.8rem;
+      padding: 0.3rem 0.75rem;
+      cursor: pointer;
+      border-radius: var(--radius);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.3); }
+    .btn-ghost.active {
+      color: var(--gold);
+      border-color: var(--gold);
+      background: var(--gold-dim);
+    }
+
+    /* ── Event header card ────────────────────────────────────────────── */
+    .event-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      margin-bottom: 1.25rem;
+      overflow: hidden;
+    }
+    .event-card-header {
+      padding: 1rem 1.25rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .event-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+    }
+    .event-store {
+      font-size: 0.8rem;
+      color: var(--gold);
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.15rem 0.5rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .badge.gold   { background: var(--gold-dim); border-color: var(--border-gold); color: var(--gold); }
+    .badge.green  { background: hsl(126 53% 35% / 0.2); border-color: hsl(126 53% 45% / 0.4); color: var(--green); }
+    .badge.red    { background: hsl(348 93% 43% / 0.2); border-color: hsl(348 93% 53% / 0.4); color: var(--red); }
+    .badge.teal   { background: hsl(198 99% 39% / 0.15); border-color: hsl(198 99% 39% / 0.4); color: var(--teal); }
+    .event-card-body {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0;
+    }
+    .event-meta-cell {
+      padding: 0.75rem 1.25rem;
+      border-right: 1px solid var(--border);
+    }
+    .event-meta-cell:last-child { border-right: none; }
+    .meta-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+    }
+    .meta-value {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .meta-value.gold { color: var(--gold); }
+
+    /* ── Tabs ─────────────────────────────────────────────────────────── */
+    .tabs-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0;
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      border-bottom: none;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.825rem;
+      font-weight: 500;
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+
+    /* ── Tab panels ──────────────────────────────────────────────────── */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      display: none;
+    }
+    .panel.active { display: block; }
+    .panel-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .panel-toolbar-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .toolbar-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-right: 0.25rem;
+    }
+    .search-input {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.3rem 0.625rem;
+      font-family: inherit;
+      font-size: 0.8rem;
+      outline: none;
+      border-radius: var(--radius);
+      width: 180px;
+      transition: border-color 0.15s;
+    }
+    .search-input::placeholder { color: var(--text-faint); }
+    .search-input:focus { border-color: var(--gold); }
+
+    /* ── Standings table ──────────────────────────────────────────────── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.825rem;
+    }
+    .data-table thead th {
+      padding: 0.6rem 1rem;
+      text-align: left;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .data-table thead th.num { text-align: right; }
+    .data-table tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .data-table tbody tr:last-child { border-bottom: none; }
+    .data-table tbody tr:hover { background: var(--bg-hover); }
+    .data-table tbody td {
+      padding: 0.6rem 1rem;
+      color: var(--text);
+      vertical-align: middle;
+    }
+    .data-table tbody td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-muted);
+    }
+    .data-table tbody td.num.highlight { color: var(--text); font-weight: 500; }
+    .rank-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+    }
+    .rank-pip {
+      width: 4px;
+      height: 28px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .rank-1 .rank-pip { background: var(--gold); }
+    .rank-2 .rank-pip { background: hsl(0 0% 70%); }
+    .rank-3 .rank-pip { background: hsl(29 60% 50%); }
+    .player-name { font-weight: 500; }
+    .player-name small {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+    .record-chip {
+      font-size: 0.75rem;
+      font-family: 'Inter', monospace;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-muted);
+    }
+    .record-chip .w { color: var(--green); }
+    .record-chip .l { color: var(--red); }
+
+    /* ── Pairings ─────────────────────────────────────────────────────── */
+    .pairings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1px;
+      background: var(--border);
+    }
+    .pairing-card {
+      background: var(--bg-card);
+      display: flex;
+      align-items: stretch;
+      transition: background 0.1s;
+    }
+    .pairing-card:hover { background: var(--bg-hover); }
+    .pairing-card.finished { border-left: 2px solid hsl(126 53% 45% / 0.35); }
+    .table-number {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      padding: 0.75rem 0;
+    }
+    .table-number .tn-label {
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .table-number .tn-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--gold);
+    }
+    .table-number .tn-done {
+      font-size: 0.6rem;
+      color: var(--green);
+      margin-top: 0.1rem;
+    }
+    .pairing-players {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0.5rem 0.75rem;
+      gap: 0.25rem;
+    }
+    .pairing-player {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.3rem 0;
+    }
+    .pairing-player + .pairing-player {
+      border-top: 1px dashed var(--border);
+    }
+    .pairing-player-name {
+      font-size: 0.825rem;
+      font-weight: 500;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pairing-player-name.bye { color: var(--text-muted); font-style: italic; }
+    .result-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      flex-shrink: 0;
+    }
+    .result-badge.win  { background: hsl(126 53% 35% / 0.25); color: var(--green); }
+    .result-badge.loss { background: hsl(348 93% 43% / 0.2);  color: var(--red); }
+    .result-badge.draw { background: var(--bg-elevated); color: var(--text-muted); }
+    .pairing-vs {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      text-align: center;
+      padding: 0.1rem 0;
+    }
+
+    /* ── Roster ───────────────────────────────────────────────────────── */
+    .roster-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1px;
+      background: var(--border);
+    }
+    .roster-card {
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      transition: background 0.1s;
+    }
+    .roster-card:hover { background: var(--bg-hover); }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      object-fit: cover;
+      background: var(--bg-elevated);
+    }
+    .avatar-placeholder {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .roster-info { flex: 1; min-width: 0; }
+    .roster-name {
+      font-size: 0.825rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .roster-record {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--text-faint);
+    }
+    .status-dot.complete  { background: var(--green); }
+    .status-dot.dropped   { background: var(--red); }
+    .status-dot.pending   { background: var(--gold); }
+
+    /* ── Loading / error states ───────────────────────────────────────── */
+    .loading-bar {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+    .skeleton {
+      background: var(--bg-elevated);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+    .empty-state {
+      padding: 3rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .empty-state svg { opacity: 0.25; margin-bottom: 0.75rem; }
+
+    .error-banner {
+      background: hsl(348 93% 43% / 0.1);
+      border: 1px solid hsl(348 93% 43% / 0.3);
+      color: var(--red);
+      padding: 0.75rem 1.25rem;
+      font-size: 0.825rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ── Refresh indicator ────────────────────────────────────────────── */
+    .refresh-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      margin-bottom: 1rem;
+    }
+    .refresh-label {
+      font-size: 0.72rem;
+      color: var(--text-faint);
+    }
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* ── Misc helpers ─────────────────────────────────────────────────── */
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+    .flex-gap { display: flex; align-items: center; gap: 0.4rem; }
+
+    @media (max-width: 600px) {
+      .event-card-body { grid-template-columns: 1fr 1fr; }
+      .event-meta-cell:nth-child(2n) { border-right: none; }
+      .event-meta-cell:nth-child(n+3) { border-top: 1px solid var(--border); }
+      .pairings-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Player spotlight modal ───────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 1rem;
+    }
+    .spotlight-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      width: 100%; max-width: 680px;
+      max-height: 85vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .spotlight-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0; gap: 1rem;
+    }
+    .spotlight-title { flex: 1; }
+    .spotlight-tag { font-size: 1.05rem; font-weight: 600; }
+    .spotlight-real-name { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .spotlight-summary {
+      display: flex; gap: 1rem; align-items: center;
+      margin-top: 0.5rem; flex-wrap: wrap;
+    }
+    .spotlight-close {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 1.3rem; padding: 0.1rem;
+      line-height: 1; flex-shrink: 0;
+    }
+    .spotlight-close:hover { color: var(--text); }
+    .spotlight-body { overflow-y: auto; flex: 1; }
+    .spotlight-section { border-bottom: 1px solid var(--border); }
+    .spotlight-section:last-child { border-bottom: none; }
+    .spotlight-section-title {
+      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-muted);
+      padding: 0.75rem 1.25rem 0.5rem;
+    }
+
+    /* ── Clickable player names ───────────────────────────────────────── */
+    .player-link { cursor: pointer; }
+    .player-link:hover { color: var(--gold); text-decoration: underline; text-decoration-color: var(--gold-dim); }
+
+    /* ── Head-to-head on pairing cards ───────────────────────────────── */
+    .pairing-h2h {
+      font-size: 0.65rem; color: var(--gold);
+      border-top: 1px dashed var(--border);
+      padding: 0.3rem 0 0.1rem;
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Page header ──────────────────────────────────────────────────────── -->
+<header class="page-header">
+  <div class="page-header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+    </svg>
+    Lorcana Tournament Stats
+  </div>
+</header>
+
+<!-- ── Main content ──────────────────────────────────────────────────────── -->
+<main class="page-wrap">
+
+  <!-- Event lookup -->
+  <div class="lookup-bar">
+    <input id="event-input"
+           type="text"
+           placeholder="Event ID  (e.g. 495144)"
+           inputmode="numeric" />
+    <button class="btn" id="load-btn" onclick="loadEvent()">Load</button>
+  </div>
+
+  <!-- Loading bar (hidden until loading) -->
+  <div id="loading-bar" class="loading-bar" style="display:none; margin-bottom:1rem;"></div>
+
+  <!-- Error banner -->
+  <div id="error-banner" class="error-banner" style="display:none; margin-bottom:1rem;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span id="error-text"></span>
+  </div>
+
+  <!-- Everything below is hidden until data loads -->
+  <div id="content" style="display:none;">
+
+    <!-- Refresh row -->
+    <div class="refresh-row">
+      <span class="live-dot" id="live-dot" style="display:none;"></span>
+      <span class="refresh-label" id="refresh-label"></span>
+      <button class="btn-ghost" onclick="refreshNow()">↻ Refresh</button>
+    </div>
+
+    <!-- Event header card -->
+    <div class="event-card">
+      <div class="event-card-header">
+        <div class="event-title" id="ev-title"></div>
+        <div class="event-store" id="ev-store"></div>
+        <div class="badge-row" id="ev-badges"></div>
+      </div>
+      <div class="event-card-body" id="ev-meta"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-bar">
+      <button class="tab-btn active" data-tab="standings" onclick="switchTab('standings')">Standings</button>
+      <button class="tab-btn" data-tab="pairings"  onclick="switchTab('pairings')">Pairings</button>
+      <button class="tab-btn" data-tab="roster"    onclick="switchTab('roster')">Roster</button>
+    </div>
+
+    <!-- ── Standings panel ── -->
+    <div class="panel active" id="panel-standings">
+      <div class="panel-toolbar">
+        <div class="panel-toolbar-left">
+          <span class="toolbar-label">Round</span>
+          <div id="standings-round-btns" class="flex-gap"></div>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:2.5rem">#</th>
+            <th>Player</th>
+            <th class="num">Record</th>
+            <th class="num">Pts</th>
+            <th class="num">OMW%</th>
+            <th class="num">GW%</th>
+            <th class="num">OGW%</th>
+          </tr>
+        </thead>
+        <tbody id="standings-body"></tbody>
+      </table>
+    </div>
+
+    <!-- ── Pairings panel ── -->
+    <div class="panel" id="panel-pairings">
+      <div class="panel-toolbar">
+        <div class="panel-toolbar-left">
+          <span class="toolbar-label">Round</span>
+          <div id="pairings-round-btns" class="flex-gap"></div>
+        </div>
+      </div>
+      <div id="pairings-grid" class="pairings-grid"></div>
+    </div>
+
+    <!-- ── Roster panel ── -->
+    <div class="panel" id="panel-roster">
+      <div class="panel-toolbar">
+        <div class="panel-toolbar-left">
+          <span class="toolbar-label" id="roster-count"></span>
+        </div>
+        <input class="search-input" id="roster-search" placeholder="Search player…" oninput="filterRoster()" />
+      </div>
+      <div id="roster-grid" class="roster-grid"></div>
+    </div>
+
+  </div><!-- /#content -->
+</main>
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────────
+// After deploying the Cloudflare Worker, paste its URL here (no trailing slash).
+// e.g. 'https://lorcana-proxy.YOUR-SUBDOMAIN.workers.dev'
+const WORKER_URL = 'https://rphtool-proxy.ilker-y.workers.dev';
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let eventData       = null;
+let standingsRound  = null;
+let pairingsRound   = null;
+let refreshTimer    = null;
+let lastFetchedAt   = null;
+
+// ─── Routing: pick up ?event= from URL ────────────────────────────────────────
+(function init() {
+  const params  = new URLSearchParams(location.search);
+  const eventId = params.get('event') || params.get('eventId');
+  if (eventId) {
+    document.getElementById('event-input').value = eventId;
+    loadEvent(eventId);
+  }
+})();
+
+// ─── Data loading ─────────────────────────────────────────────────────────────
+async function loadEvent(idOverride) {
+  const id = idOverride || document.getElementById('event-input').value.trim();
+  if (!id || !/^\d+$/.test(id)) return;
+
+  // Update URL without reload
+  const url = new URL(location.href);
+  url.searchParams.set('event', id);
+  history.replaceState(null, '', url);
+
+  setLoading(true);
+  hideError();
+
+  try {
+    const res  = await fetch(`${WORKER_URL}/api/event/${id}`);
+    if (!res.ok) throw new Error((await res.json()).error || `HTTP ${res.status}`);
+    eventData = await res.json();
+    lastFetchedAt = new Date();
+    render();
+    startAutoRefresh(id);
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function refreshNow() {
+  const id = new URLSearchParams(location.search).get('event');
+  if (!id) return;
+  setLoading(true);
+  hideError();
+  try {
+    const res = await fetch(`${WORKER_URL}/api/event/${id}`);
+    if (!res.ok) throw new Error((await res.json()).error || `HTTP ${res.status}`);
+    eventData = await res.json();
+    lastFetchedAt = new Date();
+    render(/* keepTab */ true);
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function startAutoRefresh(id) {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => refreshNow(), 30_000);
+  updateRefreshLabel();
+  setInterval(updateRefreshLabel, 5_000);
+}
+
+function updateRefreshLabel() {
+  const el = document.getElementById('refresh-label');
+  if (!lastFetchedAt) return;
+  const sec = Math.round((Date.now() - lastFetchedAt) / 1000);
+  el.textContent = sec < 5 ? 'Just updated' : `Updated ${sec}s ago`;
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render(keepTab = false) {
+  if (!eventData) return;
+
+  const d = eventData;
+  document.getElementById('content').style.display = 'block';
+  document.getElementById('live-dot').style.display =
+    (d.displayStatus === 'inProgress' || d.eventStatus === 'IN_PROGRESS') ? '' : 'none';
+
+  renderEventHeader(d);
+  buildPlayerIndex();
+
+  // Collect available rounds from standings + pairings
+  const allRoundNums = new Set([
+    ...Object.keys(d.standings || {}),
+    ...Object.keys(d.pairings  || {}),
+  ].map(Number).sort((a,b) => a-b));
+
+  const roundNums = [...allRoundNums];
+
+  // Default to the current/latest round on first load
+  if (!keepTab || standingsRound === null) {
+    standingsRound = d.currentRound?.roundNumber
+      ?? roundNums[roundNums.length - 1]
+      ?? null;
+  }
+  if (!keepTab || pairingsRound === null) {
+    pairingsRound = d.currentRound?.roundNumber
+      ?? roundNums[roundNums.length - 1]
+      ?? null;
+  }
+
+  renderRoundButtons('standings-round-btns', roundNums, standingsRound, (r) => {
+    standingsRound = r;
+    renderStandings();
+  });
+  renderRoundButtons('pairings-round-btns', roundNums, pairingsRound, (r) => {
+    pairingsRound = r;
+    renderPairings();
+  });
+
+  renderStandings();
+  renderPairings();
+  renderRoster();
+}
+
+function buildRoundLabel(d) {
+  const phases = d.phases ?? [];
+  const cur = d.currentRound;
+
+  if (phases.length <= 1) {
+    // Single-phase event: simple "X of Y" display
+    const total = phases[0]?.totalRounds ?? d.numberOfRounds ?? '?';
+    return cur ? `${cur.roundNumber} of ${total}` : (total ? `– / ${total}` : '–');
+  }
+
+  // Multi-phase: show per-phase progress (e.g. "Swiss 4/4 · Top Cut R2/4")
+  return phases.map((phase) => {
+    const total = phase.totalRounds ?? '?';
+    const phaseRoundNums = (phase.rounds ?? []).map((r) => r.round_number);
+    const done = (phase.rounds ?? []).filter((r) => r.status !== 'UPCOMING').length;
+    const isActive = cur && phaseRoundNums.includes(cur.roundNumber);
+
+    const t = (phase.roundType || '').toUpperCase();
+    const label = t === 'SWISS' ? 'Swiss'
+      : (t.includes('ELIM') || t.includes('CUT') || t.includes('TOP')) ? 'Top Cut'
+      : (phase.name || phase.roundType || 'Phase');
+
+    if (isActive) {
+      const posInPhase = phaseRoundNums.indexOf(cur.roundNumber) + 1;
+      return total !== '?' ? `${label} R${posInPhase}/${total}` : `${label} R${posInPhase}`;
+    }
+    return total !== '?' ? `${label} ${done}/${total}` : `${label} ${done}`;
+  }).join(' · ');
+}
+
+function renderEventHeader(d) {
+  document.getElementById('ev-title').textContent = d.name || `Event #${d.eventId}`;
+
+  const storeEl = document.getElementById('ev-store');
+  storeEl.textContent = d.store?.name
+    ? `${d.store.name}${d.store.full_address ? ' · ' + d.store.full_address : ''}`
+    : (d.address || '');
+
+  // Badges
+  const badgesEl = document.getElementById('ev-badges');
+  badgesEl.innerHTML = '';
+  const statusMap = {
+    inProgress: ['In Progress', 'teal'],
+    complete:   ['Complete',    'green'],
+    upcoming:   ['Upcoming',    'gold'],
+    canceled:   ['Canceled',    'red'],
+  };
+  const [statusLabel, statusCls] = statusMap[d.displayStatus] || [d.displayStatus, ''];
+  if (statusLabel) badgesEl.appendChild(makeBadge(statusLabel, statusCls));
+  if (d.eventType)   badgesEl.appendChild(makeBadge(d.eventType.replace(/_/g,' ')));
+  if (d.eventFormat && d.eventFormat !== 'OTHER') badgesEl.appendChild(makeBadge(d.eventFormat));
+  if (d.phases?.length === 1 && d.phases[0]?.roundType) badgesEl.appendChild(makeBadge(d.phases[0].roundType));
+
+  // Meta cells
+  const cur = d.currentRound;
+  const metaEl = document.getElementById('ev-meta');
+  metaEl.innerHTML = '';
+  const metas = [
+    ['Players',   `${d.playerCount}${d.capacity && d.capacity !== d.playerCount ? ' / ' + d.capacity : ''}`],
+    ['Round',     buildRoundLabel(d)],
+    ['Format',    d.gameplayFormat || fmtEventFormat(d.eventFormat) || (d.gameType === 'LORCANA' ? 'Lorcana TCG' : (d.gameType || '–'))],
+    ['Date',      d.startDatetime ? fmtDate(d.startDatetime) : '–'],
+    ['Location',  d.timezone || '–'],
+  ];
+  for (const [label, value] of metas) {
+    const cell = document.createElement('div');
+    cell.className = 'event-meta-cell';
+    cell.innerHTML = `<div class="meta-label">${label}</div><div class="meta-value">${esc(value)}</div>`;
+    metaEl.appendChild(cell);
+  }
+}
+
+function makeBadge(text, cls = '') {
+  const el = document.createElement('span');
+  el.className = 'badge' + (cls ? ' ' + cls : '');
+  el.textContent = text;
+  return el;
+}
+
+// ── Standings ─────────────────────────────────────────────────────────────────
+function renderStandings() {
+  const tbody = document.getElementById('standings-body');
+  tbody.innerHTML = '';
+
+  const rows = eventData?.standings?.[standingsRound];
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">No standings data for this round</div></td></tr>`;
+    return;
+  }
+
+  rows.forEach((row, i) => {
+    const rank   = row.rank ?? (i + 1);
+    const uid    = row.player?.id ?? row.id;
+    const flag   = countryFlag(playerIndex.get(uid)?.countryCode);
+    // Prefer the player tag (user_event_status.best_identifier) over the real name
+    const name = row.user_event_status?.best_identifier ?? row.player?.best_identifier ?? '—';
+    // match_record is the round-specific snapshot; record reflects current live data
+    const record = row.match_record || row.record || '—';
+    const parts = record.split('-').map(Number);
+    const w = parts[0] ?? 0;
+    const l = parts[1] ?? 0;
+    const d = (!isNaN(parts[2])) ? parts[2] : null;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <div class="rank-cell rank-${Math.min(rank, 4)}">
+          <div class="rank-pip"></div>
+          <span>${rank}</span>
+        </div>
+      </td>
+      <td>
+        <div class="player-name player-link" onclick="openPlayerSpotlight(${uid})">${flag ? `<span title="${esc(playerIndex.get(uid)?.countryCode)}" style="margin-right:0.3em">${flag}</span>` : ''}${esc(name)}</div>
+      </td>
+      <td class="num">
+        <span class="record-chip">
+          <span class="w">${w}</span>-<span class="l">${l}</span>${d !== null ? '-' + d : ''}
+        </span>
+      </td>
+      <td class="num highlight">${row.points ?? row.match_points ?? '—'}</td>
+      <td class="num">${fmtPct(row.opponent_match_win_percentage)}</td>
+      <td class="num">${fmtPct(row.game_win_percentage)}</td>
+      <td class="num">${fmtPct(row.opponent_game_win_percentage)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Pairings ──────────────────────────────────────────────────────────────────
+function renderPairings() {
+  const grid = document.getElementById('pairings-grid');
+  grid.innerHTML = '';
+
+  const matches = eventData?.pairings?.[pairingsRound];
+  if (!matches || matches.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">No pairings for this round</div>`;
+    return;
+  }
+
+  // Sort by table number
+  const sorted = [...matches].sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0));
+
+  sorted.forEach((match) => {
+    const pmrs     = match.player_match_relationships ?? [];
+    const p1       = pmrs[0];
+    const p2       = pmrs[1];
+    const finished = match.status === 'COMPLETE';
+    const id1      = p1?.player?.id;
+    const id2      = p2?.player?.id;
+
+    // Check if these two players have met in a previous round
+    const prevMeetings = getPreviousMeetings(id1, id2)
+      .filter(m => m.round !== pairingsRound);
+    const h2hHtml = prevMeetings.length > 0
+      ? `<div class="pairing-h2h">Previously met: ${prevMeetings.map(m =>
+          `R${m.round}${m.result ? ' · ' + m.result.label : ''}`
+        ).join(', ')}</div>`
+      : '';
+
+    const card = document.createElement('div');
+    card.className = 'pairing-card';
+    if (finished) card.classList.add('finished');
+
+    const tableNum = match.table_number ?? '?';
+    card.innerHTML = `
+      <div class="table-number">
+        <span class="tn-label">Table</span>
+        <span class="tn-value">${tableNum}</span>
+        ${finished ? '<span class="tn-done">✓</span>' : ''}
+      </div>
+      <div class="pairing-players">
+        ${renderPairingPlayer(p1, match)}
+        <div class="pairing-vs">vs</div>
+        ${renderPairingPlayer(p2, match)}
+        ${h2hHtml}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderPairingPlayer(pmr, match) {
+  if (!pmr) {
+    return `<div class="pairing-player"><span class="pairing-player-name bye">BYE</span></div>`;
+  }
+
+  const name     = pmr.user_event_status?.best_identifier ?? pmr.player?.best_identifier ?? '—';
+  const playerId = pmr.player?.id;
+  const flag     = countryFlag(playerIndex.get(playerId)?.countryCode);
+  const result   = getResult(playerId, match);
+  const resultHtml = result
+    ? `<span class="result-badge ${result.cls}">${result.label}</span>`
+    : '';
+
+  // Dim the loser's name slightly
+  const nameStyle = result?.cls === 'loss' ? ' style="opacity:0.5"' : '';
+  const clickAttr = playerId != null ? ` onclick="openPlayerSpotlight(${playerId})"` : '';
+
+  return `
+    <div class="pairing-player">
+      <span class="pairing-player-name${playerId != null ? ' player-link' : ''}"${nameStyle}${clickAttr}>${flag ? `<span style="margin-right:0.25em">${flag}</span>` : ''}${esc(name)}</span>
+      ${resultHtml}
+    </div>
+  `;
+}
+
+/**
+ * Derive a player's result from the match-level fields.
+ * The API gives us: winning_player (id), games_won_by_winner, games_won_by_loser,
+ * match_is_intentional_draw, match_is_unintentional_draw, match_is_bye, status.
+ */
+function getResult(playerId, match) {
+  if (!match || match.status !== 'COMPLETE') return null;
+
+  const isDraw = match.match_is_intentional_draw || match.match_is_unintentional_draw;
+  if (isDraw) {
+    const score = `${match.games_won_by_winner}-${match.games_won_by_loser}`;
+    return { cls: 'draw', label: `D ${score}` };
+  }
+
+  if (match.match_is_bye) {
+    return { cls: 'win', label: 'BYE' };
+  }
+
+  if (match.winning_player == null) return null;
+
+  const won   = match.winning_player === playerId;
+  const wGames = match.games_won_by_winner ?? 0;
+  const lGames = match.games_won_by_loser  ?? 0;
+  const score  = won ? `${wGames}-${lGames}` : `${lGames}-${wGames}`;
+
+  return won
+    ? { cls: 'win',  label: `W ${score}` }
+    : { cls: 'loss', label: `L ${score}` };
+}
+
+// ── Roster ────────────────────────────────────────────────────────────────────
+let rosterData = [];
+
+function renderRoster() {
+  rosterData = eventData?.roster ?? [];
+  document.getElementById('roster-count').textContent =
+    `${rosterData.length} player${rosterData.length !== 1 ? 's' : ''}`;
+  filterRoster();
+}
+
+function filterRoster() {
+  const query = document.getElementById('roster-search').value.toLowerCase();
+  const grid  = document.getElementById('roster-grid');
+  grid.innerHTML = '';
+
+  const filtered = rosterData.filter((r) => {
+    const name = (r.best_identifier || r.user?.best_identifier || '').toLowerCase();
+    return name.includes(query);
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">No players found</div>`;
+    return;
+  }
+
+  filtered.forEach((r) => {
+    const name   = r.best_identifier || r.user?.best_identifier || 'Unknown';
+    const record = `${r.matches_won ?? 0}-${r.matches_lost ?? 0}-${r.matches_drawn ?? 0}`;
+    const pts    = r.total_match_points ?? 0;
+    const status = r.registration_status === 'COMPLETE' ? 'complete'
+                 : r.registration_status === 'DROPPED'  ? 'dropped' : 'pending';
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+
+    const uid  = r.user?.id;
+    const flag = countryFlag(r.user?.country_code);
+    const card = document.createElement('div');
+    card.className = 'roster-card' + (uid != null ? ' player-link' : '');
+    if (uid != null) card.addEventListener('click', () => openPlayerSpotlight(uid));
+    card.innerHTML = `
+      <div class="avatar-placeholder">${esc(initials)}</div>
+      <div class="roster-info">
+        <div class="roster-name">${flag ? `<span style="margin-right:0.3em">${flag}</span>` : ''}${esc(name)}</div>
+        <div class="roster-record">${record} · ${pts} pts</div>
+      </div>
+      <div class="status-dot ${status}" title="${r.registration_status ?? ''}"></div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ─── Round button renderer ────────────────────────────────────────────────────
+function renderRoundButtons(containerId, roundNums, activeRound, onClick) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  if (roundNums.length === 0) return;
+
+  roundNums.forEach((r) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-ghost' + (r === activeRound ? ' active' : '');
+    btn.textContent = `R${r}`;
+
+    // Dim rounds that have no data
+    const hasStandings = !!eventData?.standings?.[r];
+    const hasPairings  = !!eventData?.pairings?.[r];
+    if (containerId.includes('standings') && !hasStandings) btn.style.opacity = '0.4';
+    if (containerId.includes('pairings')  && !hasPairings)  btn.style.opacity = '0.4';
+
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.btn-ghost').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      onClick(r);
+    });
+    container.appendChild(btn);
+  });
+}
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${tab}`);
+  });
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+function setLoading(on) {
+  document.getElementById('loading-bar').style.display = on ? '' : 'none';
+  document.getElementById('load-btn').disabled = on;
+}
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  document.getElementById('error-text').textContent = msg;
+  el.style.display = 'flex';
+}
+function hideError() {
+  document.getElementById('error-banner').style.display = 'none';
+}
+
+// ─── Formatters ───────────────────────────────────────────────────────────────
+function fmtEventFormat(fmt) {
+  if (!fmt || fmt === 'OTHER') return '';
+  const labels = {
+    CORE_CONSTRUCTED:     'Core Constructed',
+    INFINITY_CONSTRUCTED: 'Infinity Constructed',
+    SEALED:               'Sealed',
+    DRAFT:                'Draft',
+    TEAM_SEALED:          'Team Sealed',
+  };
+  return labels[fmt] ?? fmt.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Convert a 2-letter ISO country code to a flag emoji, or '' if unavailable. */
+function countryFlag(code) {
+  if (!code || code.length !== 2) return '';
+  const base = 0x1F1E6 - 65; // Regional Indicator Symbol A = U+1F1E6; 'A' = 65
+  return String.fromCodePoint(code.toUpperCase().charCodeAt(0) + base)
+       + String.fromCodePoint(code.toUpperCase().charCodeAt(1) + base);
+}
+
+function fmtPct(val) {
+  if (val == null) return '—';
+  return (val * 100).toFixed(1) + '%';
+}
+function fmtDate(iso) {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch { return iso; }
+}
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ─── Player index ─────────────────────────────────────────────────────────────
+let playerIndex = new Map(); // userId → { tag, accountName, userId, matchHistory[], standingsHistory[] }
+
+function buildPlayerIndex() {
+  playerIndex = new Map();
+
+  // Seed from roster (r.user.id is the canonical user ID)
+  for (const r of eventData.roster ?? []) {
+    const uid = r.user?.id;
+    if (uid == null) continue;
+    playerIndex.set(uid, {
+      tag:         r.best_identifier || r.user?.best_identifier || '?',
+      accountName: r.user?.best_identifier || '',
+      countryCode: r.user?.country_code || null,
+      userId:      uid,
+      rosterEntry: r,
+      matchHistory:     [],
+      standingsHistory: [],
+    });
+  }
+
+  // Add standings rows (row.player.id === user ID)
+  for (const [roundStr, rows] of Object.entries(eventData.standings ?? {})) {
+    const round = Number(roundStr);
+    for (const row of rows) {
+      const uid = row.player?.id ?? row.id;
+      if (uid == null) continue;
+      if (!playerIndex.has(uid)) {
+        playerIndex.set(uid, {
+          tag:         row.user_event_status?.best_identifier ?? row.player?.best_identifier ?? '?',
+          accountName: row.player?.best_identifier ?? '',
+          userId:      uid,
+          matchHistory:     [],
+          standingsHistory: [],
+        });
+      }
+      playerIndex.get(uid).standingsHistory.push({ round, row });
+    }
+  }
+
+  // Build match history from pairings
+  for (const [roundStr, matches] of Object.entries(eventData.pairings ?? {})) {
+    const round = Number(roundStr);
+    for (const match of matches) {
+      const pmrs = match.player_match_relationships ?? [];
+      const p1 = pmrs[0], p2 = pmrs[1];
+      const id1   = p1?.player?.id;
+      const id2   = p2?.player?.id ?? null;
+      const name1 = p1 ? (p1.user_event_status?.best_identifier ?? p1.player?.best_identifier ?? '?') : '?';
+      const name2 = p2 ? (p2.user_event_status?.best_identifier ?? p2.player?.best_identifier ?? 'BYE') : 'BYE';
+
+      if (id1 != null) {
+        if (!playerIndex.has(id1)) playerIndex.set(id1, { tag: name1, accountName: '', countryCode: p1.player?.country_code || null, userId: id1, matchHistory: [], standingsHistory: [] });
+        playerIndex.get(id1).matchHistory.push({ round, opponentId: id2, opponentName: name2, result: getResult(id1, match), table: match.table_number, match });
+      }
+      if (id2 != null) {
+        if (!playerIndex.has(id2)) playerIndex.set(id2, { tag: name2, accountName: '', countryCode: p2?.player?.country_code || null, userId: id2, matchHistory: [], standingsHistory: [] });
+        playerIndex.get(id2).matchHistory.push({ round, opponentId: id1, opponentName: name1, result: getResult(id2, match), table: match.table_number, match });
+      }
+    }
+  }
+}
+
+// ─── Head-to-head lookup ──────────────────────────────────────────────────────
+function getPreviousMeetings(id1, id2) {
+  if (!id1 || !id2) return [];
+  const meetings = [];
+  for (const [roundStr, matches] of Object.entries(eventData.pairings ?? {})) {
+    const round = Number(roundStr);
+    for (const match of matches) {
+      const ids = (match.player_match_relationships ?? []).map(p => p.player?.id);
+      if (ids.includes(id1) && ids.includes(id2)) {
+        meetings.push({ round, result: getResult(id1, match) });
+      }
+    }
+  }
+  return meetings;
+}
+
+// ─── Player spotlight modal ───────────────────────────────────────────────────
+function openPlayerSpotlight(userId) {
+  const player = playerIndex.get(userId);
+  if (!player) return;
+
+  closePlayerSpotlight();
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.id = 'player-spotlight';
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closePlayerSpotlight(); });
+
+  // Summary record — prefer live roster data, fall back to latest standings row
+  const r = player.rosterEntry;
+  const latestStandings = [...player.standingsHistory].sort((a, b) => b.round - a.round)[0]?.row;
+  const wins   = r?.matches_won   ?? 0;
+  const losses = r?.matches_lost  ?? 0;
+  const draws  = r?.matches_drawn ?? 0;
+  const pts    = r?.total_match_points ?? latestStandings?.points ?? latestStandings?.match_points ?? 0;
+
+  // Tiebreaker trajectory
+  // Build cumulative record per round from match history (standings rows always show final record)
+  const trajRows = [...player.standingsHistory]
+    .sort((a, b) => a.round - b.round)
+    .map(({ round, row }) => {
+      // Count results through this round
+      let w = 0, l = 0, d = 0;
+      for (const { round: r, result } of player.matchHistory) {
+        if (r > round) continue;
+        if (!result) continue;
+        if (result.cls === 'win')  w++;
+        else if (result.cls === 'loss') l++;
+        else if (result.cls === 'draw') d++;
+      }
+      const recordHtml = `<span class="record-chip"><span class="w">${w}</span>-<span class="l">${l}</span>${d > 0 ? '-' + d : ''}</span>`;
+      return `
+      <tr>
+        <td>R${round}</td>
+        <td>${recordHtml}</td>
+        <td class="num">${row.points ?? row.match_points ?? '—'}</td>
+        <td class="num">${row.rank ?? '—'}</td>
+        <td class="num">${fmtPct(row.opponent_match_win_percentage)}</td>
+        <td class="num">${fmtPct(row.game_win_percentage)}</td>
+        <td class="num">${fmtPct(row.opponent_game_win_percentage)}</td>
+      </tr>
+    `;
+    }).join('');
+
+  // Match history
+  const matchRows = [...player.matchHistory]
+    .sort((a, b) => a.round - b.round)
+    .map(({ round, opponentId, opponentName, result, table }) => {
+      const resultHtml = result
+        ? `<span class="result-badge ${result.cls}">${result.label}</span>`
+        : '<span style="color:var(--text-faint)">—</span>';
+      const oppFlag = countryFlag(playerIndex.get(opponentId)?.countryCode);
+      const oppHtml = opponentId != null
+        ? `<span class="player-link" onclick="openPlayerSpotlight(${opponentId})">${oppFlag ? `<span style="margin-right:0.25em">${oppFlag}</span>` : ''}${esc(opponentName)}</span>`
+        : esc(opponentName);
+      return `
+        <tr>
+          <td>R${round}</td>
+          <td>${table != null ? 'T' + table : '—'}</td>
+          <td>${oppHtml}</td>
+          <td>${resultHtml}</td>
+        </tr>
+      `;
+    }).join('');
+
+  const modal = document.createElement('div');
+  modal.className = 'spotlight-modal';
+  modal.innerHTML = `
+    <div class="spotlight-header">
+      <div class="spotlight-title">
+        <div class="spotlight-tag">${countryFlag(player.countryCode) ? `<span style="margin-right:0.4em">${countryFlag(player.countryCode)}</span>` : ''}${esc(player.tag)}</div>
+        ${player.accountName && player.accountName !== player.tag
+          ? `<div class="spotlight-real-name">${esc(player.accountName)}</div>`
+          : ''}
+        <div class="spotlight-summary">
+          <span class="record-chip">
+            <span class="w">${wins}</span>-<span class="l">${losses}</span>${draws > 0 ? '-' + draws : ''}
+          </span>
+          <span style="font-size:0.8rem;color:var(--text-muted)">${pts} pts</span>
+        </div>
+      </div>
+      <button class="spotlight-close" onclick="closePlayerSpotlight()">✕</button>
+    </div>
+    <div class="spotlight-body">
+      ${trajRows ? `
+        <div class="spotlight-section">
+          <div class="spotlight-section-title">Tiebreaker Trajectory</div>
+          <table class="data-table">
+            <thead><tr>
+              <th>Round</th><th>Record</th><th class="num">Pts</th><th class="num">Rank</th>
+              <th class="num">OMW%</th><th class="num">GW%</th><th class="num">OGW%</th>
+            </tr></thead>
+            <tbody>${trajRows}</tbody>
+          </table>
+        </div>
+      ` : ''}
+      ${matchRows ? `
+        <div class="spotlight-section">
+          <div class="spotlight-section-title">Match History</div>
+          <table class="data-table">
+            <thead><tr>
+              <th>Round</th><th>Table</th><th>Opponent</th><th>Result</th>
+            </tr></thead>
+            <tbody>${matchRows}</tbody>
+          </table>
+        </div>
+      ` : '<div class="empty-state">No match history available</div>'}
+    </div>
+  `;
+
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+  document.addEventListener('keydown', escListener);
+}
+
+function escListener(e) {
+  if (e.key === 'Escape') closePlayerSpotlight();
+}
+
+function closePlayerSpotlight() {
+  const el = document.getElementById('player-spotlight');
+  if (el) el.remove();
+  document.removeEventListener('keydown', escListener);
+}
+
+// ─── Enter key on input ───────────────────────────────────────────────────────
+document.getElementById('event-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') loadEvent();
+});
+</script>
+</body>
+</html>
